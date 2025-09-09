@@ -1,0 +1,61 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF → Terceros Mailer</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>PDF → Terceros Mailer</h1>
+  </header>
+
+  <section class="card">
+    <h2>1) Subir PDF</h2>
+    <form id="uploadForm">
+      <input type="file" id="pdf" name="pdf" accept="application/pdf" required />
+      <button type="submit">Procesar</button>
+    </form>
+    <div id="uploadInfo"></div>
+  </section>
+
+  <section class="card">
+    <h2>2) Grilla</h2>
+    <div class="toolbar">
+  <input id="subject" placeholder="Asunto" />
+  <input id="body" placeholder="Mensaje" />
+  <input id="senderEmail" type="email" placeholder="Tu correo (reply-to)" value="carlos.montero@syncbi.net" required />
+  <button id="sendBtn" disabled>Enviar seleccionados</button>
+  <span id="sendStatus" style="margin-left:8px;"></span>
+</div>
+
+    <table id="grid">
+      <thead>
+        <tr>
+          <th>Sel</th>
+          <th>Página</th>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Vista previa</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>3) Agregar/Actualizar tercero</h2>
+    <div class="row">
+      <input id="newNit" placeholder="NIT (solo dígitos)" />
+      <input id="newNombre" placeholder="Nombre" />
+      <input id="newEmail" placeholder="Email" />
+      <button id="saveTercero">Guardar</button>
+    </div>
+    <div id="saveInfo"></div>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>
