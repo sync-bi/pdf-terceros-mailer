@@ -7,12 +7,13 @@ import Database from "better-sqlite3";
 import XLSX from "xlsx";
 import { PDFDocument } from "pdf-lib";
 import nodemailer from "nodemailer";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ storage: multer.memoryStorage() });
 
 /* ---------- SMTP ---------- */
 const transporter = nodemailer.createTransport({
@@ -23,7 +24,8 @@ const transporter = nodemailer.createTransport({
 });
 
 /* ---------- DB terceros (con NIT) ---------- */
-const db = new Database("db.sqlite");
+const DB_PATH = process.env.DB_PATH || (process.env.VERCEL ? "/tmp/db.sqlite" : "db.sqlite");
+const db = new Database(DB_PATH);
 db.exec(`
 CREATE TABLE IF NOT EXISTS terceros (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -130,7 +132,7 @@ const uploadsCache = new Map();
 app.post("/api/upload-pdf", upload.single("pdf"), async (req,res)=>{
   if (!req.file) return res.status(400).json({ error: "PDF requerido" });
   try {
-    const bytes = fs.readFileSync(req.file.path);
+    const bytes = req.file.buffer;
     const pagesText = await extractPerPageText(bytes);
 
     const rows = pagesText.map((text, i)=>{
@@ -144,7 +146,7 @@ app.post("/api/upload-pdf", upload.single("pdf"), async (req,res)=>{
       };
     });
 
-    const uploadId = path.basename(req.file.path);
+    const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     uploadsCache.set(uploadId, { bytes });
 
     res.json({ uploadId, totalPages: pagesText.length, rows });
@@ -181,4 +183,9 @@ app.post("/api/send", async (req,res)=>{
   res.json({ results });
 });
 
-app.listen(PORT, ()=> console.log(`Listening on http://localhost:${PORT}`));
+const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+  app.listen(PORT, ()=> console.log(`Listening on http://localhost:${PORT}`));
+}
+
+export default app;
