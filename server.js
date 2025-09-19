@@ -51,23 +51,29 @@ const getAllNitsSet = () => new Set(qAllNits.all().map(r => String(r.nit)));
 let allNits = getAllNitsSet();
 
 /* ---------- Seed desde ./data/terceros.xlsx ---------- */
-(function seedFromExcel(){
+function reimportFromExcel(){
   const excelPath = path.join("data","terceros.xlsx");
-  if (!fs.existsSync(excelPath)) return;
+  if (!fs.existsSync(excelPath)) return { processed: 0, total: 0, skipped: 0, message: "excel no encontrado" };
   const wb = XLSX.readFile(excelPath);
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
+  let processed = 0; let skipped = 0; const total = rows.length;
   db.transaction(() => {
     for (const r of rows) {
       const nit = normDigits(r.nit || r.NIT || r.Nit || r["NIT"] || r["Nit"]);
       const nombre = String(r.nombre || r.Nombre || r["Nombre Tercero"] || "").trim();
       const email  = String(r.email || r.Email || r.CORREO || r.Correo || "").trim();
-      if (nit && nombre && isEmail(email)) upsertByNit.run({ nit, nombre, email });
+      if (nit && nombre && isEmail(email)) { upsertByNit.run({ nit, nombre, email }); processed++; }
+      else skipped++;
     }
   })();
   allNits = getAllNitsSet();
-})();
+  return { processed, total, skipped };
+}
+
+// seed inicial
+reimportFromExcel();
 
 /* ---------- PDF helpers ---------- */
 async function extractPerPageText(buffer){
@@ -127,6 +133,21 @@ app.post("/api/terceros", (req,res)=>{
   } catch(err){ return res.status(500).json({ error: err.message }); }
 });
 
+// Eliminar tercero por id
+app.delete("/api/terceros/:id", (req,res)=>{
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: "id inválido" });
+  try {
+    const info = db.prepare("DELETE FROM terceros WHERE id=?").run(id);
+    if (info.changes > 0) {
+      allNits = getAllNitsSet();
+      return res.json({ deleted: true });
+    } else {
+      return res.status(404).json({ error: "no encontrado" });
+    }
+  } catch(err){ return res.status(500).json({ error: err.message }); }
+});
+
 const uploadsCache = new Map();
 
 app.post("/api/upload-pdf", upload.single("pdf"), async (req,res)=>{
@@ -181,6 +202,16 @@ app.post("/api/send", async (req,res)=>{
     }
   }
   res.json({ results });
+});
+
+// Reimportar Excel bajo demanda
+app.post("/api/reimport-excel", (_req, res)=>{
+  try {
+    const info = reimportFromExcel();
+    res.json({ ok: true, ...info });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
