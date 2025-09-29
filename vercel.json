@@ -6,6 +6,7 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "api/index.js" },
     { "handle": "filesystem" },
+    { "src": "/", "dest": "public/index.html" },
     { "src": "/(.*)", "dest": "public/$1" }
   ]
 }
