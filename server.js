@@ -14,6 +14,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage() });
+// Desactivar ETag para evitar caché condicional
+app.set('etag', false);
 
 /* ---------- SMTP ---------- */
 const transporter = nodemailer.createTransport({
@@ -111,7 +113,36 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 app.use(express.static("public"));
 
-app.get("/api/terceros", (_req, res) => res.json(qAllTerceros.all()));
+app.get("/api/terceros", (_req, res) => {
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    "Surrogate-Control": "no-store"
+  });
+  res.json(qAllTerceros.all());
+});
+
+// Limpieza total de uploads temporales y caché en memoria
+app.post("/api/cleanup-uploads", (_req, res) => {
+  let clearedFiles = 0;
+  try {
+    const dir = "/tmp/uploads";
+    if (fs.existsSync(dir)) {
+      for (const name of fs.readdirSync(dir)) {
+        try { fs.unlinkSync(path.join(dir, name)); clearedFiles++; } catch {}
+      }
+    }
+  } catch {}
+  try { uploadsCache.clear(); } catch {}
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    "Surrogate-Control": "no-store"
+  });
+  res.json({ ok: true, clearedFiles, cacheCleared: true });
+});
 
 app.post("/api/terceros", (req,res)=>{
   const { nit, nombre, email } = req.body || {};

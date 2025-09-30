@@ -32,7 +32,7 @@ function initTheme(){
 }
 
 async function fetchTerceros(){
-  const r = await fetch('/api/terceros');
+  const r = await fetch('/api/terceros', { cache: 'no-store' });
   terceros = await r.json();
 }
 
@@ -388,6 +388,50 @@ async function init(){
     const badge = document.getElementById('pagesBadge');
     if (badge) badge.textContent = '';
   });
+
+  // Limpiar todo (borra caché del servidor y resetea UI)
+  const purgeBtn = document.getElementById('purgeUploadsBtn');
+  if (purgeBtn){
+    purgeBtn.addEventListener('click', async ()=>{
+      const status = document.getElementById('sendStatus');
+      try {
+        purgeBtn.disabled = true;
+        status.className = 'status';
+        status.textContent = 'Limpiando...';
+        const resp = await fetch('/api/cleanup-uploads', { method: 'POST' });
+        const data = await resp.json().catch(()=>({}));
+        // Reset UI igual que "Limpiar grilla"
+        rows = [];
+        uploadId = null;
+        totalPages = 0;
+        const tbody = document.querySelector('#grid tbody');
+        if (tbody) tbody.innerHTML = '';
+        document.getElementById('sendBtn').disabled = true;
+        const counter = document.getElementById('selectedCounter');
+        if (counter) counter.textContent = 'Seleccionados: 0/0';
+        document.getElementById('uploadInfo').textContent = '';
+        document.getElementById('subject').value = '';
+        document.getElementById('body').value = '';
+        const pdfInput = document.getElementById('pdf');
+        if (pdfInput) pdfInput.value = '';
+        const badge = document.getElementById('pagesBadge');
+        if (badge) badge.textContent = '';
+        if (resp.ok && data && data.ok) {
+          status.className = 'status status--ok';
+          status.textContent = `Limpieza completa. Archivos borrados: ${data.clearedFiles || 0}`;
+        } else {
+          status.className = 'status status--warn';
+          status.textContent = 'Limpieza parcial (revisa servidor)';
+        }
+      } catch (e) {
+        const status = document.getElementById('sendStatus');
+        status.className = 'status status--err';
+        status.textContent = 'Error al limpiar: ' + e.message;
+      } finally {
+        purgeBtn.disabled = false;
+      }
+    });
+  }
 
   // Salir
   document.getElementById('exitBtn').addEventListener('click', ()=>{
