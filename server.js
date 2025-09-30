@@ -198,10 +198,21 @@ app.post("/api/send", async (req,res)=>{
       });
       results.push({ page: sel.page, status: "sent" });
     } catch(err){
+      console.error("SMTP send error", { page: sel.page, to: sel.email, message: err.message, code: err.code });
       results.push({ page: sel.page, status: "error", error: err.message });
     }
   }
   res.json({ results });
+});
+
+// Verificar credenciales SMTP desde Producción
+app.get("/api/smtp-verify", async (_req, res) => {
+  try {
+    await transporter.verify();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message, code: err.code });
+  }
 });
 
 // Reimportar Excel bajo demanda
