@@ -176,18 +176,25 @@ app.post("/api/upload-pdf", upload.single("pdf"), async (req,res)=>{
 
 // Body: { uploadId, selections:[{page,nombre,email}], subject, body, senderEmail }
 app.post("/api/send", async (req,res)=>{
-  const { uploadId, selections, subject, body, senderEmail } = req.body || {};
-  if (!uploadId || !Array.isArray(selections)) return res.status(400).json({ error: "payload inválido" });
+  const { uploadId, selections, subject, body, senderEmail, pdfData } = req.body || {};
+  if (!Array.isArray(selections)) return res.status(400).json({ error: "payload inválido" });
   if (!isEmail(senderEmail)) return res.status(400).json({ error: "senderEmail requerido y válido" });
 
-  const item = uploadsCache.get(uploadId);
-  if (!item) return res.status(400).json({ error: "uploadId inválido o expirado" });
+  let originalBytes = null;
+  if (uploadId) {
+    const item = uploadsCache.get(uploadId);
+    if (item && item.bytes) originalBytes = item.bytes;
+  }
+  if (!originalBytes && pdfData) {
+    try { originalBytes = Buffer.from(String(pdfData), 'base64'); } catch {}
+  }
+  if (!originalBytes) return res.status(400).json({ error: "uploadId inválido o expirado" });
 
   const results = [];
   for (const sel of selections){
     if (!isEmail(sel.email)) { results.push({ page: sel.page, status: "skipped", reason: "sin email válido" }); continue; }
     try {
-      const pdfBytes = await buildSinglePagePdf(item.bytes, sel.page - 1);
+      const pdfBytes = await buildSinglePagePdf(originalBytes, sel.page - 1);
       await transporter.sendMail({
         from: process.env.MAIL_FROM || process.env.SMTP_USER,
         replyTo: senderEmail,

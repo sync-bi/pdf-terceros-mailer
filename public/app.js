@@ -2,6 +2,7 @@ let terceros = [];
 let uploadId = null;
 let rows = [];
 let totalPages = 0;
+let pdfDataB64 = null; // copia local del PDF para serverless
 
 // --- Theme toggle ---
 function applyTheme(theme){
@@ -200,6 +201,26 @@ async function init(){
   document.getElementById('uploadForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const fd = new FormData(e.target);
+    // Lee el PDF a base64 y consérvalo en memoria para el envío
+    try {
+      const file = document.getElementById('pdf').files[0];
+      if (file) {
+        pdfDataB64 = await new Promise((resolve, reject)=>{
+          const fr = new FileReader();
+          fr.onload = () => {
+            const res = String(fr.result || '');
+            const idx = res.indexOf(',');
+            resolve(idx >= 0 ? res.slice(idx+1) : res);
+          };
+          fr.onerror = () => reject(fr.error || new Error('FileReader error'));
+          fr.readAsDataURL(file);
+        });
+      } else {
+        pdfDataB64 = null;
+      }
+    } catch (e) {
+      pdfDataB64 = null;
+    }
     const r = await fetch('/api/upload-pdf', { method: 'POST', body: fd });
     const data = await r.json();
     if (data.error){
@@ -271,7 +292,7 @@ async function init(){
       const resp = await fetch('/api/send', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ uploadId, selections, subject, body, senderEmail })
+        body: JSON.stringify({ uploadId, selections, subject, body, senderEmail, pdfData: pdfDataB64 })
       });
 
       const data = await resp.json().catch(()=>({}));
