@@ -106,7 +106,9 @@ async function buildSinglePagePdf(originalBytes, pageIndex){
 }
 
 /* ---------- App ---------- */
-app.use(express.json());
+// Aumenta límite de JSON/URL-encoded para permitir payloads con selecciones grandes
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
 app.use(express.static("public"));
 
 app.get("/api/terceros", (_req, res) => res.json(qAllTerceros.all()));
@@ -156,7 +158,7 @@ app.post("/api/upload-pdf", upload.single("pdf"), async (req,res)=>{
     const bytes = req.file.buffer;
     const pagesText = await extractPerPageText(bytes);
 
-    const rows = pagesText.map((text, i)=>{
+  const rows = pagesText.map((text, i)=>{
       const nit = extractNitFromText(text);
       const byNit = nit ? qFindByNit.get(nit) : null;
       return {
@@ -167,10 +169,15 @@ app.post("/api/upload-pdf", upload.single("pdf"), async (req,res)=>{
       };
     });
 
-    const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    uploadsCache.set(uploadId, { bytes });
+  const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  uploadsCache.set(uploadId, { bytes });
+  try {
+    const tmpDir = "/tmp/uploads";
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, `${uploadId}.pdf`), bytes);
+  } catch {}
 
-    res.json({ uploadId, totalPages: pagesText.length, rows });
+  res.json({ uploadId, totalPages: pagesText.length, rows });
   } catch(err){ res.status(500).json({ error: err.message }); }
 });
 
@@ -184,6 +191,14 @@ app.post("/api/send", async (req,res)=>{
   if (uploadId) {
     const item = uploadsCache.get(uploadId);
     if (item && item.bytes) originalBytes = item.bytes;
+  }
+  if (!originalBytes) {
+    try {
+      const filePath = path.join("/tmp/uploads", `${uploadId}.pdf`);
+      if (fs.existsSync(filePath)) {
+        originalBytes = fs.readFileSync(filePath);
+      }
+    } catch {}
   }
   if (!originalBytes && pdfData) {
     try { originalBytes = Buffer.from(String(pdfData), 'base64'); } catch {}
