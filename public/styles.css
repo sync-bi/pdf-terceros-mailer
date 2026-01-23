@@ -50,10 +50,11 @@ header h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: .2px; 
 /* Controls */
 .toolbar { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
-input, button {
+input, button, textarea {
   padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px;
 }
-input { background: #fff; }
+input, textarea { background: #fff; }
+textarea { resize: vertical; font-family: inherit; min-height: 80px; width: 100%; flex-basis: 100% !important; }
 .btn-ghost { background: transparent; color: var(--on-primary); border-color: transparent; }
 .btn-ghost:hover { background: rgba(255,255,255,.12); }
 .toolbar input { flex: 1 1 220px; }
@@ -62,7 +63,7 @@ button { cursor: pointer; background: var(--primary); color: var(--on-primary); 
 button:hover:not(:disabled) { filter: brightness(0.96); }
 button:active:not(:disabled) { transform: translateY(1px); }
 button:disabled { opacity: .6; cursor: not-allowed; }
-input:focus, button:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(234,133,17,.20); }
+input:focus, button:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(234,133,17,.20); }
 .status { margin-left: 8px; min-width: 140px; display: inline-block; color: var(--muted-text); }
 .status--ok { color: #0f766e; }
 .status--warn { color: #a16207; }
@@ -90,7 +91,7 @@ tbody tr:hover { background: #fffaf2; }
 
 /* Dark adjustments */
 :root[data-theme="dark"] .card { background:#0b1220; border-color: var(--border); box-shadow: none; }
-:root[data-theme="dark"] input { background:#0b1220; color: var(--text); border-color:#344155; }
+:root[data-theme="dark"] input, :root[data-theme="dark"] textarea { background:#0b1220; color: var(--text); border-color:#344155; }
 :root[data-theme="dark"] table { background:#0b1220; }
 :root[data-theme="dark"] tbody tr:hover { background:#0b1425; }
 :root[data-theme="dark"] thead th { color:#f1f5f9; }
