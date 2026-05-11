@@ -269,7 +269,12 @@ async function init(){
     cbs.forEach((cb, idx)=>{
       if (cb.checked){
         const r = rows[idx];
-        selections.push({ page: r.page, nombre: r.matched?.nombre || '', email: r.matched?.email || '' });
+        selections.push({
+          page: r.page,
+          nit: r.nit || r.matched?.nit || '',
+          nombre: r.matched?.nombre || '',
+          email: r.matched?.email || ''
+        });
       }
     });
     if (!uploadId || selections.length === 0){
