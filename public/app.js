@@ -74,6 +74,8 @@ function renderGrid(){
       row.lastSaved = { nombre: row.matched.nombre, email: row.matched.email };
     }
     const tr = document.createElement('tr');
+    const hasEmail = !!(row.matched && row.matched.email);
+    if (!hasEmail) tr.classList.add('row-missing');
 
     const tdSel = document.createElement('td');
     const cb = document.createElement('input');
@@ -111,6 +113,9 @@ function renderGrid(){
     inEmail.addEventListener('input', ()=>{
       row.matched = row.matched || { id:null, nombre: inNombre.value, email:'' };
       row.matched.email = inEmail.value;
+      const validNow = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inEmail.value.trim());
+      tr.classList.toggle('row-missing', !validNow);
+      updateMissingCounter();
     });
     inEmail.addEventListener('change', ()=>{
       const nombre = inNombre.value.trim();
@@ -230,6 +235,7 @@ function renderGrid(){
   }
   document.getElementById('sendBtn').disabled = rows.length === 0;
   updateSelectedCounter();
+  updateMissingCounter();
 }
 
 function updateSelectedCounter(){
@@ -237,6 +243,16 @@ function updateSelectedCounter(){
   const selected = Array.from(document.querySelectorAll('#grid tbody input[type="checkbox"]')).filter(cb=>cb.checked).length;
   const el = document.getElementById('selectedCounter');
   if (el) el.textContent = `Seleccionados: ${selected}/${total}`;
+}
+
+function updateMissingCounter(){
+  const total = rows.length || 0;
+  const missing = document.querySelectorAll('#grid tbody tr.row-missing').length;
+  const el = document.getElementById('missingCounter');
+  if (el) {
+    el.textContent = total > 0 ? `Sin correo: ${missing}/${total}` : '';
+    el.className = missing > 0 ? 'status status--warn' : 'status status--ok';
+  }
 }
 
 async function init(){
@@ -441,6 +457,17 @@ async function init(){
     updateSelectedCounter();
   });
 
+  // Toggle filtro: ver solo filas sin correo
+  const filterMissingBtn = document.getElementById('filterMissingBtn');
+  if (filterMissingBtn) {
+    filterMissingBtn.addEventListener('click', ()=>{
+      const grid = document.getElementById('grid');
+      const active = grid.classList.toggle('filter-missing');
+      filterMissingBtn.classList.toggle('filter-active', active);
+      filterMissingBtn.textContent = active ? 'Ver todas las filas' : 'Ver solo sin correo';
+    });
+  }
+
   // Limpiar grilla (resetea estado y formulario)
   document.getElementById('resetGridBtn').addEventListener('click', ()=>{
     rows = [];
@@ -454,6 +481,8 @@ async function init(){
     status.textContent = '';
     const counter = document.getElementById('selectedCounter');
     if (counter) counter.textContent = 'Seleccionados: 0/0';
+    const missingEl = document.getElementById('missingCounter');
+    if (missingEl) { missingEl.textContent = ''; missingEl.className = 'status'; }
     document.getElementById('uploadInfo').textContent = '';
     document.getElementById('subject').value = '';
     document.getElementById('body').value = '';
@@ -461,6 +490,10 @@ async function init(){
     if (pdfInput) pdfInput.value = '';
     const badge = document.getElementById('pagesBadge');
     if (badge) badge.textContent = '';
+    const grid = document.getElementById('grid');
+    if (grid) grid.classList.remove('filter-missing');
+    const fbtn = document.getElementById('filterMissingBtn');
+    if (fbtn) { fbtn.classList.remove('filter-active'); fbtn.textContent = 'Ver solo sin correo'; }
   });
 
   // Limpiar todo (borra caché del servidor y resetea UI)

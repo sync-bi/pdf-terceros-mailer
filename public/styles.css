@@ -89,6 +89,17 @@ thead th { text-align: left; background: var(--primary-50); color: #7a4a08; }
 th, td { border-top: 1px solid var(--border); padding: 8px; vertical-align: top; }
 tbody tr:hover { background: #fffaf2; }
 
+/* Filas sin correo: resaltar para que se vean facil */
+tbody tr.row-missing { background: #fef2f2; }
+tbody tr.row-missing:hover { background: #fee9e9; }
+tbody tr.row-missing td:nth-child(4) input { border-color: #f87171; box-shadow: 0 0 0 2px rgba(248,113,113,.15); }
+
+/* Filtro activo: ocultar filas con correo */
+#grid.filter-missing tbody tr:not(.row-missing) { display: none; }
+
+/* Boton de filtro cuando esta activo */
+button.filter-active { background: var(--primary); color: var(--on-primary); }
+
 /* Dark adjustments */
 :root[data-theme="dark"] .card { background:#0b1220; border-color: var(--border); box-shadow: none; }
 :root[data-theme="dark"] input, :root[data-theme="dark"] textarea { background:#0b1220; color: var(--text); border-color:#344155; }

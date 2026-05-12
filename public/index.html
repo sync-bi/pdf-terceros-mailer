@@ -33,6 +33,7 @@
         <button id="selectAllBtn" type="button" class="btn-secondary">Sel. todos</button>
         <button id="clearSelectionBtn" type="button" class="btn-secondary">Limpiar</button>
         <button id="selectMatchesBtn" type="button" class="btn-secondary">Solo coincidentes</button>
+        <button id="filterMissingBtn" type="button" class="btn-secondary">Ver solo sin correo</button>
         <button id="resetGridBtn" type="button" class="btn-secondary">Limpiar grilla</button>
         <button id="purgeUploadsBtn" type="button" class="btn-secondary">Limpiar todo</button>
         <input id="subject" placeholder="Asunto" />
@@ -46,6 +47,7 @@ Agradecemos su atención y su constante colaboración.</textarea>
         <input id="senderEmail" type="email" placeholder="Tu correo (reply-to)" value="gestor.fya@nevoxfarma.com" required />
         <button id="sendBtn" disabled>Enviar seleccionados</button>
         <span id="selectedCounter" class="status"></span>
+        <span id="missingCounter" class="status"></span>
         <span id="sendStatus" class="status"></span>
       </div>
 
@@ -65,7 +67,7 @@ Agradecemos su atención y su constante colaboración.</textarea>
     </section>
 
     <section class="card">
-      <h2>3) Agregar/Actualizar tercero</h2>
+      <h2>3) Agregar/Actualizar tercero manualmente (sin PDF)</h2>
       <div class="row">
         <input id="newNit" placeholder="NIT (solo dígitos)" />
         <input id="newNombre" placeholder="Nombre" />
