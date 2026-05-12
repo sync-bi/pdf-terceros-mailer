@@ -6,7 +6,8 @@
     "node": "20.x"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

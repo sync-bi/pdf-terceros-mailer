@@ -178,9 +178,24 @@ async function extractPerPageText(buffer){
 function extractNitFromText(text, nitsSet){
   const cands = (text.match(/[\d\.\-]{7,20}/g) || [])
     .map(normDigits).filter(n => n.length >= 7 && n.length <= 12);
+  // 1) Match exacto
   for (const n of cands) if (nitsSet.has(n)) return n;
+  // 2) Sin el ultimo digito: muchos PDFs traen el NIT con DV pegado (ej: "890321151-0" -> "8903211510")
+  //    pero el NIT en la base esta sin DV ("890321151"). Probar la variante.
+  for (const n of cands) {
+    if (n.length >= 8) {
+      const sinDV = n.slice(0, -1);
+      if (nitsSet.has(sinDV)) return sinDV;
+    }
+  }
+  // 3) Fallback por regex explicito "Nit: ..."
   const m = text.match(/Nit\.?\s*[:\-]?\s*([\d\.\-]+)/i);
-  if (m) return normDigits(m[1]);
+  if (m) {
+    const raw = normDigits(m[1]);
+    if (nitsSet.has(raw)) return raw;
+    if (raw.length >= 8 && nitsSet.has(raw.slice(0, -1))) return raw.slice(0, -1);
+    return raw;
+  }
   return "";
 }
 
