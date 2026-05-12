@@ -3,6 +3,36 @@ let uploadId = null;
 let rows = [];
 let totalPages = 0;
 let pdfDataB64 = null; // copia local del PDF para serverless
+const pendingSaves = new Set();
+
+async function autoSaveTercero(row, nombre, email, nit) {
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!nombre || !validEmail) return;
+  if (row.lastSaved && row.lastSaved.nombre === nombre && row.lastSaved.email === email) return;
+  const p = (async () => {
+    try {
+      const resp = await fetch('/api/terceros', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nit, nombre, email })
+      });
+      if (!resp.ok) return;
+      const data = await resp.json().catch(()=>({}));
+      row.lastSaved = { nombre, email };
+      row.matched = row.matched || {};
+      row.matched.id = data.id ?? row.matched.id ?? null;
+      row.matched.nit = data.nit ?? row.matched.nit ?? (nit || null);
+      row.matched.nombre = nombre;
+      row.matched.email = email;
+      await fetchTerceros();
+    } catch (e) {
+      console.warn('Auto-guardado falló:', e);
+    }
+  })();
+  pendingSaves.add(p);
+  p.finally(() => pendingSaves.delete(p));
+  return p;
+}
 
 // --- Theme toggle ---
 function applyTheme(theme){
@@ -40,6 +70,9 @@ function renderGrid(){
   const tbody = document.querySelector('#grid tbody');
   tbody.innerHTML = '';
   for (const row of rows){
+    if (!row.lastSaved && row.matched && row.matched.nombre && row.matched.email) {
+      row.lastSaved = { nombre: row.matched.nombre, email: row.matched.email };
+    }
     const tr = document.createElement('tr');
 
     const tdSel = document.createElement('td');
@@ -62,6 +95,12 @@ function renderGrid(){
       const t = terceros.find(t=> t.nombre.toLowerCase() === inNombre.value.toLowerCase());
       if (t){ row.matched.id = t.id; row.matched.email = t.email; inEmail.value = t.email; }
     });
+    inNombre.addEventListener('change', ()=>{
+      const nombre = inNombre.value.trim();
+      const email = inEmail.value.trim();
+      const nit = (row.nit || row.matched?.nit || '').toString();
+      autoSaveTercero(row, nombre, email, nit);
+    });
     tdNombre.appendChild(inNombre);
 
     const tdEmail = document.createElement('td');
@@ -72,6 +111,12 @@ function renderGrid(){
     inEmail.addEventListener('input', ()=>{
       row.matched = row.matched || { id:null, nombre: inNombre.value, email:'' };
       row.matched.email = inEmail.value;
+    });
+    inEmail.addEventListener('change', ()=>{
+      const nombre = inNombre.value.trim();
+      const email = inEmail.value.trim();
+      const nit = (row.nit || row.matched?.nit || '').toString();
+      autoSaveTercero(row, nombre, email, nit);
     });
     tdEmail.appendChild(inEmail);
 
@@ -200,6 +245,30 @@ async function init(){
 
   document.getElementById('uploadForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
+
+    // Antes de subir el nuevo PDF: forzar guardado de cualquier tercero
+    // que el usuario haya escrito en la grilla actual y aún no se haya persistido.
+    const tbodyPrev = document.querySelector('#grid tbody');
+    if (tbodyPrev) {
+      const trsPrev = tbodyPrev.querySelectorAll('tr');
+      trsPrev.forEach((tr, idx) => {
+        const ins = tr.querySelectorAll('input');
+        const inNombre = ins[1];
+        const inEmail = ins[2];
+        if (!inNombre || !inEmail) return;
+        const nombre = inNombre.value.trim();
+        const email = inEmail.value.trim();
+        const r = rows[idx];
+        if (!r) return;
+        const nit = (r.nit || r.matched?.nit || '').toString();
+        autoSaveTercero(r, nombre, email, nit);
+      });
+    }
+    // Esperar a que terminen los guardados pendientes antes de subir el PDF.
+    if (pendingSaves.size > 0) {
+      await Promise.all(Array.from(pendingSaves));
+    }
+
     const fd = new FormData(e.target);
     // Lee el PDF a base64 y consérvalo en memoria para el envío
     try {
